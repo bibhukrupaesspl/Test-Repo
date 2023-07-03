@@ -1,0 +1,277 @@
+--INC5824521
+--Transport Admin.aspx
+SELECT TOP 21 Transports.SubContextCode AS [Client]
+	,Transports.TransportNumber AS [TO#]
+	,Transports_TransportStatus.TransportStatusDisplayName AS [Status]
+	,Transports.TransportCarrierID AS [Transporter code]
+	,Transports.TransportThresholdType AS [Modality type]
+	,Transports_FirstStop.TransportStopDeliveryDateTime AS [Transportation dt/tm]
+	,Transports.IDTransport AS [ID]
+	,Transports.TransportStatusID AS [Status ID]
+	,Transports_TransportStatus.TransportStatusWarningLevel AS [Warning level]
+	,Transports.TransportType AS [TO Haulage type]
+	,Transports_FirstStop.TransportStopDeliveryAddress4 AS [First pick up Name - 2nd language]
+	,Transports_FirstStop.TransportStopDeliveryReference2 AS [First pick up Address - 2nd language]
+	,Transports_LastStop.TransportStopDeliveryRegionCode AS [Delivery Chargable location code]
+	,Transports_LastStop.TransportStopDeliveryCompanyID AS [Delivery ID]
+	,Transports_LastStop.TransportStopDeliveryAddress4 AS [Delivery Name - 2nd language]
+	,Transports_LastStop.TransportStopDeliveryReference2 AS [Delivery Address - 2nd language]
+	,CAST(Transports.TransportInternalNotes AS NVARCHAR(max)) AS [TO remark]
+	,Transports.TransportPickUpCountry AS [Customs Clearance Mode]
+	,Transports.TransportUserDefinedDateTime05 AS [SI Cut off dt/tm (Carrier)]
+	,(
+		SELECT MIN(TransportDetailRegionCode)
+		FROM TransportDetails TD WITH (NOLOCK)
+		INNER JOIN TransportStops [TS] WITH (NOLOCK) ON IDTransportStop = TD.TransportStopID
+		WHERE TransportID = Transports.IDTransport
+			AND TS.TransportStopNumber = 1
+			AND TS.TransportStopType = 'Pick-up'
+		) AS [SO#_1]
+	,Transports.TransportCarrierName AS [Transporter name]
+	,Transports.TransportTruckDriver AS [Driver name]
+	,Transports.TransportTruckPhone AS [Mobile No]
+	,Transports.TransportTruckLicensePlate AS [Licence tag]
+	,Transports.TransportBasedOnOptimization AS [Any Stop Or Detail Cancelled]
+	,Transports.TransportUserDefinedYesNo05 AS [TO Cancelled]
+	,Transports_TOWithTotalAmount.CostAmount AS [Total Amount]
+	,Transports.TransportExternalCompanySavedChargesDateTime AS [Charges saved dt/tm]
+	,Transports.CurrencyCode AS [DG]
+	,MAX(ISNULL(Transports.TransportFileUploadCount, 0)) AS [Transport Files Count]
+	,Transports.TransportDirect AS [Domestic DO: Yes/No]
+	,MAX(Transports_FirstStop_TransportDetails.CompanyIDSupplier) AS [Shipper Name]
+	,Transports.CountryCode AS [Country code]
+	,Transports.SubContextCode AS [Sub context code]
+	,Transports.TransportSalesOrderNumber AS [FCR/HBL]
+	,Transports.TransportChosenNonOptimalReasonCode AS [Container Tare Weight]
+	,MAX(Transports_TransportStops_TransportDetails_Shipment.ShipmentConsigneeCity) AS [Bill Type]
+	,Transports_TransportStops_TransportDetails_Shipment.ShipmentDelivery3CompanyID AS [Shipper ID]
+	,MAX(Transports_TransportStops_TransportDetails_Shipment.ShipmentConsigneeSCVCode) AS [CUS UID]
+	,Transports_FirstStop.TransportStopDeliveryReference AS [First pick up State]
+FROM Transports WITH (NOLOCK)
+LEFT JOIN TransportStatuses [Transports_TransportStatus] WITH (NOLOCK) ON Transports.TransportStatusID = Transports_TransportStatus.IDTransportStatus
+LEFT JOIN TransportStops [Transports_FirstStop] WITH (NOLOCK) ON Transports.TransportStopIDFirst = Transports_FirstStop.IDTransportStop
+LEFT JOIN TransportStops [Transports_TransportStops] WITH (NOLOCK) ON Transports_TransportStops.TransportID = Transports.IDTransport
+LEFT JOIN TransportDetails [Transports_TransportStops_TransportDetails] WITH (NOLOCK) ON Transports_TransportStops_TransportDetails.TransportStopID = Transports_TransportStops.IDTransportStop
+LEFT JOIN TransportStops [Transports_LastStop] WITH (NOLOCK) ON Transports.TransportStopIDLast = Transports_LastStop.IDTransportStop
+LEFT JOIN Companies [Transports_Company_3ACompanyIDCarrier] WITH (NOLOCK) ON Transports.TransportCarrierID = Transports_Company_3ACompanyIDCarrier.IDCompany
+LEFT JOIN (
+	SELECT BQ.TransportID AS TransportID
+		,CAST(SUM(BC.BillingCostCostInvoiceCurrency) AS DECIMAL(18, 2)) AS CostAmount
+	FROM Transports T WITH (NOLOCK)
+	INNER JOIN BillingQuantities BQ WITH (NOLOCK) ON T.IDTransport = BQ.TransportID
+	INNER JOIN BillingCosts BC WITH (NOLOCK) ON BQ.IDBillingQuantity = BC.BillingQuantityID
+	GROUP BY BQ.TransportID
+	) [Transports_TOWithTotalAmount] ON Transports.IDTransport = Transports_TOWithTotalAmount.TransportID
+LEFT JOIN (
+	SELECT BQ.TransportID AS TransportID
+		,CAST(SUM(BC.BillingCostCostInvoiceCurrency) AS DECIMAL(18, 2)) AS CostAmount
+	FROM Transports T WITH (NOLOCK)
+	INNER JOIN BillingQuantities BQ WITH (NOLOCK) ON T.IDTransport = BQ.TransportID
+	INNER JOIN BillingCosts BC WITH (NOLOCK) ON BQ.IDBillingQuantity = BC.BillingQuantityID
+	LEFT JOIN CompanyRateCharges CR WITH (NOLOCK) ON CR.IDCompanyRateCharge = BQ.CompanyRateChargeID
+	LEFT JOIN Charges C WITH (NOLOCK) ON CR.ChargeID = C.IDCharge
+	WHERE C.ChargeName NOT LIKE '%Damco%'
+	GROUP BY BQ.TransportID
+	) [Transports_TruckerTotalChargeAmount] ON Transports.IDTransport = Transports_TruckerTotalChargeAmount.TransportID
+LEFT JOIN TransportDetails [Transports_FirstStop_TransportDetails] WITH (NOLOCK) ON Transports_FirstStop_TransportDetails.TransportStopID = Transports_FirstStop.IDTransportStop
+LEFT JOIN Shipments [Transports_TransportStops_TransportDetails_Shipment] WITH (NOLOCK) ON Transports_TransportStops_TransportDetails.ShipmentID = Transports_TransportStops_TransportDetails_Shipment.IDShipment
+WHERE Transports.SubContextCode IN (
+		N'CN_BJSVAS'
+		,N'CN_DAIAIR'
+		,N'CN_DAIOCE'
+		,N'CN_DAISCM'
+		,N'CN_DAIVAS'
+		,N'CN_ESQUEL'
+		,N'CN_FOOAIR'
+		,N'CN_FOOIMP'
+		,N'CN_FOOOCE'
+		,N'CN_FOOSCM'
+		,N'CN_FOOVAS'
+		,N'CN_HASBRO'
+		,N'CN_HKAIR'
+		,N'CN_HP'
+		,N'CN_HPOCP'
+		,N'CN_JAKKSHK'
+		,N'CN_LYGOCE'
+		,N'CN_LYGSCM'
+		,N'CN_LYGVAS'
+		,N'CN_MACYS'
+		,N'CN_MGA'
+		,N'CN_NKGAIR'
+		,N'CN_NKGIMP'
+		,N'CN_NKGOCE'
+		,N'CN_NKGSCM'
+		,N'CN_NKGSCM_HUFFY'
+		,N'CN_NKGVAS'
+		,N'CN_NPOAIR'
+		,N'CN_NPOCL'
+		,N'CN_NPOIMP'
+		,N'CN_NPOOCE'
+		,N'CN_NPOOCELCL'
+		,N'CN_NPOSCM'
+		,N'CN_NPOSCM1'
+		,N'CN_NPOSCM2'
+		,N'CN_NPOSCM_HUFFY'
+		,N'CN_NPOVAS'
+		,N'CN_PACNET'
+		,N'CN_PRECL'
+		,N'CN_PRSAIR'
+		,N'CN_PRSCL'
+		,N'CN_PRSHAS'
+		,N'CN_PRSMACY'
+		,N'CN_PRSOCE'
+		,N'CN_PRSPREMP'
+		,N'CN_PRSSEARS'
+		,N'CN_PRSVAS2'
+		,N'CN_PRSVAS4'
+		,N'CN_PRSWWW'
+		,N'CN_PRSZTE'
+		,N'CN_PRWAIR'
+		,N'CN_PRWOCE'
+		,N'CN_PRWSCM'
+		,N'CN_PRWVAS'
+		,N'CN_RAIL'
+		,N'CN_SCMPRS'
+		,N'CN_SGHAIR'
+		,N'CN_SGHBLUE'
+		,N'CN_SGHCH'
+		,N'CN_SGHIMP'
+		,N'CN_SGHMACY'
+		,N'CN_SGHMSFT'
+		,N'CN_SGHOCE'
+		,N'CN_SGHSCM'
+		,N'CN_SGHVAS'
+		,N'CN_SHYVAS'
+		,N'CN_SUN'
+		,N'CN_TARGETUS'
+		,N'CN_TJNAIR'
+		,N'CN_TJNOCE'
+		,N'CN_TJNSCM'
+		,N'CN_TJNVAS'
+		,N'CN_TSTAIR'
+		,N'CN_TSTOCE'
+		,N'CN_TSTSCM'
+		,N'CN_TSTVAS'
+		,N'CN_WALMARTUS'
+		,N'CN_XIMAIR'
+		,N'CN_XIMIKEA'
+		,N'CN_XIMIMP'
+		,N'CN_XIMOCE'
+		,N'CN_XIMSCM'
+		,N'CN_XIMSCM1'
+		,N'CN_XIMVAS'
+		)
+	AND Transports.TransportNumber LIKE N'%2303171126%'
+	AND Transports.TransportStatusID IN (
+		'a14ffb0b-4c29-462a-efbf-08d0c3c1bb2e'
+		,'6754e7a8-6deb-4658-0368-08d0c3c342a0'
+		,'6b13e018-14d8-42f2-b556-08d0c3c3c568'
+		,'9d636b3c-6ea4-470c-3e11-08d6246bf496'
+		,'05530bf2-4c7b-49f8-0094-08d0c3c2cc05'
+		,'f399fd66-2408-4d15-ed5c-08d0c3c38a49'
+		,'9ec4eed2-0b98-427e-e04b-08d0c3c004d9'
+		,'676aa683-7d19-414e-20ee-08d0d0fcb1cd'
+		,'640e4aad-af0a-4f57-b585-08d0c3c2969d'
+		,'fe01a795-038b-4017-1e16-08d0d0e5ef19'
+		,'64830fe5-ef37-4c27-2734-08d0c3c4207f'
+		,'03ca7b3d-96d6-4be5-0158-08d0af4ff27a'
+		,'19495593-f1e8-4197-4a04-08d209076524'
+		,'444464b7-60d4-438f-8895-08d0ca0b1817'
+		,'4a3a64b7-60d4-438f-8895-08d0ca0b1817'
+		,'ecde70d4-5512-4783-83e1-08d0c3c20918'
+		,'44447b3d-96d6-4be5-0158-08d0af4ff27a'
+		,'3ee9c4d7-bd44-4510-8557-63d37e7d6ffa'
+		,'23b98045-45d7-41af-8cc6-08d0b4cd259a'
+		)
+	AND Transports.DataEntryDefinitionID IN (
+		'90b52adf-eb7b-4565-238f-08d0f61c8bae'
+		,'757f6364-34ad-47f9-d597-08d0af500643'
+		)
+GROUP BY Transports.SubContextCode
+	,Transports.TransportNumber
+	,Transports_TransportStatus.TransportStatusDisplayName
+	,Transports.TransportLastChequeNumber
+	,Transports.TransportCarrierID
+	,Transports.TransportThresholdType
+	,Transports_FirstStop.TransportStopDeliveryDateTime
+	,Transports.IDTransport
+	,Transports.TransportStatusID
+	,Transports_TransportStatus.TransportStatusWarningLevel
+	,CAST(CASE 
+			WHEN Transports_TransportStatus.TransportStatusWarningLevel IS NOT NULL
+				AND TransportStatusWarningLevel >= 3
+				THEN 1
+			ELSE 0
+			END AS BIT)
+	,Transports.TransportType
+	,Transports_FirstStop.TransportStopUserDefinedText02
+	,Transports_FirstStop.TransportStopDeliveryCompanyID
+	,Transports_FirstStop.TransportStopDeliveryCompanyName
+	,Transports_FirstStop.TransportStopDeliveryAddress4
+	,Transports_FirstStop.TransportStopDeliveryRegionCode
+	,Transports_FirstStop.TransportStopDeliveryAddress1
+	,Transports_FirstStop.TransportStopDeliveryReference2
+	,Transports_FirstStop.TransportStopDeliveryZipCode
+	,Transports_FirstStop.TransportStopDeliveryCity
+	,Transports_LastStop.TransportStopDeliveryRegionCode
+	,Transports_LastStop.TransportStopDeliveryCompanyID
+	,Transports_LastStop.TransportStopDeliveryCompanyName
+	,Transports_LastStop.TransportStopDeliveryAddress4
+	,Transports_LastStop.TransportStopDeliveryReference2
+	,CAST(Transports.TransportInternalNotes AS NVARCHAR(max))
+	,Transports.TransportDock
+	,Transports.TransportUserDefinedText08
+	,Transports.TransportPickUpCountry
+	,Transports_FirstStop.TransportStopDeliveryState
+	,Transports.TransportUserDefinedDateTime05
+	,Transports.TransportUserDefinedDateTime07
+	,Transports.TransportUserDefinedDateTime04
+	,Transports.TransportEstimatedDateTimeOfDeparture
+	,Transports.TransportUserDefinedText14
+	,Transports.TransportContainerNumber
+	,Transports.TransportSeal1
+	,Transports.TransportUserDefinedText15
+	,Transports.TransportUserDefinedText06
+	,Transports.TransportVesselCode
+	,Transports.TransportVoyageCode
+	,Transports.TransportEstimatedDateTimeOfArrival
+	,Transports.TransportCarrierName
+	,Transports.TransportTruckDriver
+	,Transports.TransportTruckPhone
+	,Transports.TransportTruckLicensePlate
+	,Transports.TransportTruck2LicensePlate
+	,Transports.TransportUserDefinedText01
+	,CAST(Transports.TransportChosenNonOptimalReason AS NVARCHAR(max))
+	,Transports.TransportUserDefinedText02
+	,Transports.TransportRoute
+	,Transports.TransportAddDateTime
+	,Transports.TransportEditDateTime
+	,Transports.TransportAddUserCode
+	,Transports.TransportEditUserCode
+	,Transports.TransportUserDefinedText09
+	,Transports.TransportUserDefinedText10
+	,Transports.TransportContact
+	,Transports.TransportUserDefinedYesNo04
+	,Transports.TransportOptimizationPlanName
+	,Transports.TransportOptimizationPlanRunID
+	,Transports.TransportUserDefinedText03
+	,Transports.TransportContactPhone
+	,CAST(Transports.TransportContactEmail AS NVARCHAR) + ISNULL(cast(' ; ' + CAST(Transports.TransportVesselName AS NVARCHAR) AS NVARCHAR), '')
+	,Transports.TransportBasedOnOptimization
+	,Transports.TransportUserDefinedYesNo05
+	,CAST(Transports.TransportUserDefinedLongText03 AS NVARCHAR(max))
+	,Transports_TOWithTotalAmount.CostAmount
+	,Transports.TransportUserDefinedYesNo03
+	,Transports.TransportExternalCompanySavedChargesDateTime
+	,Transports_FirstStop.TransportStopDeliveryAddress3
+	,Transports.CurrencyCode
+	,CAST(Transports.TransportNotes AS NVARCHAR(max))
+	,Transports.TransportDirect
+	,Transports.CountryCode
+	,Transports.SubContextCode
+	,Transports.TransportSalesOrderNumber
+	,Transports.TransportChosenNonOptimalReasonCode
+	,Transports_TransportStops_TransportDetails_Shipment.ShipmentDelivery3CompanyID
+	,Transports_FirstStop.TransportStopDeliveryReference
+ORDER BY Transports.TransportEditDateTime DESC
+	--WCSPRHR1340

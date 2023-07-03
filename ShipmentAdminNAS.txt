@@ -1,0 +1,268 @@
+--Shiment Admin.aspx for double TO from single DO - 2350331
+
+SELECT TOP 21 Shipments.ShipmentNumber AS [DO#]
+	,Shipments_TransportStatus.TransportStatusDisplayName AS [Status]
+	,Shipments_TransportStatus.TransportStatusWarningLevel AS [Warning level]
+	,Shipments.IDShipment AS [ID]
+	,Shipments.TransportStatusID AS [Status ID]
+	,Shipments.SubContextCode AS [Filter selected clients]
+	,Shipments_TransportsOnShipmentLevel.TransportNumbers AS [TO#]
+	,Shipments.ShipmentPickUpReference AS [TransactionID]
+	,CASE 
+		WHEN MAX(Shipments_ShipmentDetails.ShipmentDetailPONumber) IS NULL
+			THEN NULL
+		WHEN MAX(Shipments_ShipmentDetails.ShipmentDetailPONumber) = MIN(Shipments_ShipmentDetails.ShipmentDetailPONumber)
+			THEN MAX(Shipments_ShipmentDetails.ShipmentDetailPONumber)
+		ELSE '[multiple]'
+		END AS [PO#]
+	,Shipments.ShipmentDelivery3CompanyID AS [Shipper ID]
+	,Shipments.ShipmentDelivery3CompanyName AS [Shipper name]
+	,Shipments.SubContextCode AS [Client]
+	,CAST(Shipments.ShipmentUserDefinedLongText01 AS NVARCHAR(max)) AS [Client Group]
+	,Shipments.ShipmentDepartment AS [Department]
+	,Shipments.ShipmentDelivery4City AS [Discharge port]
+	,Shipments.ShipmentGoodsAvailableDateTime AS [Cargo ready date]
+	,Shipments.ShipmentUserDefinedDateTime02 AS [Ship Begin Date]
+	,Shipments.ShipmentUserDefinedDateTime03 AS [Ship End Date]
+	,Shipments.ShipmentShippingOrderNumber AS [SO#]
+	,Shipments.ShipmentType AS [Service Type]
+	,SUM(Cast(Round(Shipments_ShipmentDetails.ShipmentDetailVolume, 2, 1) AS DECIMAL(18, 2))) AS [CBM]
+	,SUM(Cast(Round(Shipments_ShipmentDetails.ShipmentDetailWeight, 2, 1) AS DECIMAL(18, 2))) AS [KGS]
+	,Shipments.ShipmentCustomsClearance AS [Customs modes]
+	,Shipments.ShipmentPickUpCompanyID AS [Pick up ID]
+	,Shipments.ShipmentPickUpShortName AS [Pick up ShortName]
+	,Shipments.ShipmentPickUpCustomsLocation AS [Pick up Customs broker location]
+	,Shipments.ShipmentPickUpUserDefinedText01 AS [Pick up Customs broker location 2nd]
+	,Shipments.ShipmentPickUpZipCode AS [Pick up Town]
+	,Shipments.ShipmentUserDefinedText12 AS [PO Type]
+	,Shipments.ShipmentUserDefinedYesNo01 AS [WPRD accept or not]
+	,CAST(Shipments.ShipmentNotes AS NVARCHAR(max)) AS [Remark]
+	,Shipments.ShipmentPreferredContainerType AS [AutoPlan Required Container type]
+	,Shipments.ShipmentCombinationID AS [AutoPlan Combination ID]
+	,Shipments.ShipmentPriorityOrder AS [AutoPlan Priority order]
+	,Shipments.ShipmentUserDefinedText01 AS [Client ref 1]
+	,Shipments.ShipmentUserDefinedText02 AS [Client ref 2]
+	,Shipments.ShipmentUserDefinedText03 AS [Client ref 3]
+	,Shipments.ShipmentDelivery3Country AS [Shipper BE Code]
+	,Shipments.ShipmentDelivery3Contact AS [Shipper contact]
+	,Shipments.ShipmentDelivery3Phone AS [Shipper phone]
+	,Shipments.ShipmentDelivery3Email AS [Shipper email]
+	,Shipments.ShipmentDelivery4CompanyName AS [Port of Loading]
+	,Shipments.ShipmentDelivery4ZipCode AS [Final Destination]
+	,Shipments.ShipmentPalletTypeCode AS [Haulage Type]
+	,Shipments.ShipmentCustomsOffice AS [Broker name]
+	,Shipments.ShipmentUserDefinedText13 AS [DG]
+	,Shipments.ShipmentConsigneeContact AS [Account/Sales Manager ]
+	,Shipments.ShipmentIncoTerm AS [Inco terms]
+	,Shipments.ShipmentContainerType AS [Container Type]
+	,CASE 
+		WHEN MAX(Shipments.ShipmentUserDefinedText15) IS NULL
+			THEN NULL
+		WHEN MAX(Shipments.ShipmentUserDefinedText15) = MIN(Shipments.ShipmentUserDefinedText15)
+			THEN MAX(Shipments.ShipmentUserDefinedText15)
+		ELSE '[multiple]'
+		END AS [Carrier SO#]
+	,Shipments.ShipmentUserDefinedText14 AS [Carrier]
+	,Shipments.ShipmentVesselCode AS [Vessel]
+	,Shipments.ShipmentVoyageCode AS [Voyage]
+	,Shipments.ShipmentEstimatedDateTimeOfDeparture AS [ETD]
+	,Shipments.ShipmentUserDefinedDateTime04 AS [CFS/CY closing dt/tm]
+	,Shipments.ShipmentUserDefinedDateTime07 AS [SI Cut off dt/tm (Damco)]
+	,Shipments.ShipmentUserDefinedDateTime05 AS [SI Cut off dt/tm (Carrier)]
+	,SUM(CASE 
+			WHEN ISNUMERIC(Shipments_ShipmentDetails.ShipmentDetailQuantity) = 1
+				THEN CAST(Shipments_ShipmentDetails.ShipmentDetailQuantity AS DECIMAL(18, 2))
+			END) AS [Qty]
+	,Shipments.ShipmentAddUserCode AS [DO Creator ID]
+	,Shipments.ShipmentOwnerLogin AS [DO Owner ID]
+	,Shipments.ShipmentAddDateTime AS [Created dt/tm]
+	,Shipments.ShipmentDeliveryCompanyID AS [Delivery ID]
+	,Shipments.ShipmentDeliveryCompanyName AS [Delivery Name]
+	,Shipments.ShipmentPickUpDateTime AS [Expected Pickup date]
+	,Shipments.ShipmentUserDefinedDateTime01 AS [Order received date]
+	,Shipments.ShipmentUserDefinedYesNo05 AS [Import]
+	,Shipments.ShipmentPickUpRegionCode AS [Pick up chargeable location code]
+	,Shipments.ShipmentDeliveryRegionCode AS [Delivery chargeable location code]
+	,Shipments.ShipmentConsigneeFax AS [Container Tare Weight]
+	,Shipments.ShipmentContainerNumber AS [Container No]
+	,Shipments.ShipmentConsigneeSCVCode AS [CUS UID]
+	,Shipments_ShipmentDetails.ShipmentDetailAddDateTime AS [Add date time]
+	,Shipments.ShipmentConsigneeCity AS [Bill Type]
+	,Shipments.ShipmentBundleID AS [Transporter Code]
+FROM Shipments WITH (NOLOCK)
+LEFT JOIN TransportStatuses [Shipments_TransportStatus] WITH (NOLOCK) ON Shipments.TransportStatusID = Shipments_TransportStatus.IDTransportStatus
+LEFT JOIN (
+	(
+		SELECT ShipmentID
+			,CASE COUNT(DISTINCT CAST(T.TransportNumber AS VARCHAR(max)))
+				WHEN 0
+					THEN NULL
+				WHEN 1
+					THEN MAX(CAST(T.TransportNumber AS VARCHAR(max)))
+				WHEN 2
+					THEN MIN(CAST(T.TransportNumber AS VARCHAR(max))) + ', ' + MAX(CAST(T.TransportNumber AS VARCHAR(max)))
+				ELSE MIN(CAST(T.TransportNumber AS VARCHAR(max))) + ', ' + MAX(CAST(T.TransportNumber AS VARCHAR(max))) + ' + ' + CAST(COUNT(DISTINCT CAST(T.TransportNumber AS VARCHAR(max))) - 2 AS VARCHAR(100)) + ' more'
+				END AS TransportNumbers
+			,CASE COUNT(DISTINCT CAST(T.TransportCarrierName AS VARCHAR(max)))
+				WHEN 0
+					THEN NULL
+				WHEN 1
+					THEN MAX(CAST(T.TransportCarrierName AS VARCHAR(max)))
+				WHEN 2
+					THEN MIN(CAST(T.TransportCarrierName AS VARCHAR(max))) + ', ' + MAX(CAST(T.TransportCarrierName AS VARCHAR(max)))
+				ELSE MIN(CAST(T.TransportCarrierName AS VARCHAR(max))) + ', ' + MAX(CAST(T.TransportCarrierName AS VARCHAR(max))) + ' + ' + CAST(COUNT(DISTINCT CAST(T.TransportCarrierName AS VARCHAR(max))) - 2 AS VARCHAR(100)) + ' more'
+				END AS TransportCarriers
+		FROM TransportDetails TD WITH (NOLOCK)
+		INNER JOIN TransportStops TS WITH (NOLOCK) ON TransportStopID = IDTransportStop
+		INNER JOIN Transports T WITH (NOLOCK) ON TransportID = IDTransport
+		GROUP BY ShipmentID
+		)
+	) [Shipments_TransportsOnShipmentLevel] ON Shipments_TransportsOnShipmentLevel.ShipmentID = Shipments.IDShipment
+LEFT JOIN ShipmentDetails [Shipments_ShipmentDetails] WITH (NOLOCK) ON Shipments_ShipmentDetails.ShipmentID = Shipments.IDShipment
+WHERE Shipments.ShipmentNumber LIKE N'%2350331%'
+	AND (
+		Shipments.TransportStatusID IN (
+			'fda21955-3a47-4569-318d-08d0889f60ce'
+			,'30280a6d-e013-473d-883e-08d0889f36df'
+			,'f5aedc34-4f22-4451-bd89-08d0889f831e'
+			,'44440a6d-e013-473d-883e-08d0889f36df'
+			,'9e583389-2b9d-4108-3951-08d0b3e316d3'
+			,'575ad83c-6c37-4e9b-fef2-08d0889fddd3'
+			)
+		OR Shipments.TransportStatusID IS NULL
+		)
+	AND Shipments.SubContextCode IN (
+		N'CN_ESQUEL'
+		,N'CN_HASBRO'
+		,N'CN_HKAIR'
+		,N'CN_HP'
+		,N'CN_HPOCP'
+		,N'CN_JAKKSHK'
+		,N'CN_MACYS'
+		,N'CN_MGA'
+		,N'CN_PACNET'
+		,N'CN_PRSAIR'
+		,N'CN_PRSCL'
+		,N'CN_PRSHAS'
+		,N'CN_PRSMACY'
+		,N'CN_PRSOCE'
+		,N'CN_PRSPREMP'
+		,N'CN_PRSSEARS'
+		,N'CN_PRSVAS2'
+		,N'CN_PRSVAS4'
+		,N'CN_PRSWWW'
+		,N'CN_PRSZTE'
+		,N'CN_SCMPRS'
+		,N'CN_SUN'
+		,N'CN_TARGETUS'
+		,N'CN_WALMARTUS'
+		)
+	AND Shipments.SubContextCode IN (
+		N'CN_ESQUEL'
+		,N'CN_HASBRO'
+		,N'CN_HKAIR'
+		,N'CN_HP'
+		,N'CN_HPOCP'
+		,N'CN_JAKKSHK'
+		,N'CN_MACYS'
+		,N'CN_MGA'
+		,N'CN_PACNET'
+		,N'CN_PRSAIR'
+		,N'CN_PRSCL'
+		,N'CN_PRSHAS'
+		,N'CN_PRSMACY'
+		,N'CN_PRSOCE'
+		,N'CN_PRSPREMP'
+		,N'CN_PRSSEARS'
+		,N'CN_PRSVAS2'
+		,N'CN_PRSVAS4'
+		,N'CN_PRSWWW'
+		,N'CN_PRSZTE'
+		,N'CN_SCMPRS'
+		,N'CN_SUN'
+		,N'CN_TARGETUS'
+		,N'CN_WALMARTUS'
+		)
+	AND Shipments.DataEntryDefinitionID IN (
+		'a1a40245-7dc9-457b-d41a-08d2546491f6'
+		,'4dfd85e8-82e7-416f-b4f0-08d088a0a135'
+		,'1c4bf9ed-d6ec-4988-5e78-08d30140a36f'
+		)
+GROUP BY Shipments.ShipmentNumber
+	,Shipments_TransportStatus.TransportStatusDisplayName
+	,Shipments_TransportStatus.TransportStatusWarningLevel
+	,CAST(CASE 
+			WHEN Shipments_TransportStatus.TransportStatusWarningLevel IS NOT NULL
+				AND TransportStatusWarningLevel >= 3
+				THEN 1
+			ELSE 0
+			END AS BIT)
+	,Shipments.IDShipment
+	,Shipments.TransportStatusID
+	,Shipments.SubContextCode
+	,Shipments_TransportsOnShipmentLevel.TransportNumbers
+	,Shipments.ShipmentPickUpReference
+	,Shipments.ShipmentDelivery3CompanyID
+	,Shipments.ShipmentDelivery3CompanyName
+	,Shipments.SubContextCode
+	,CAST(Shipments.ShipmentUserDefinedLongText01 AS NVARCHAR(max))
+	,Shipments.ShipmentDepartment
+	,Shipments.ShipmentDelivery4City
+	,Shipments.ShipmentGoodsAvailableDateTime
+	,Shipments.ShipmentUserDefinedDateTime02
+	,Shipments.ShipmentUserDefinedDateTime03
+	,Shipments.ShipmentShippingOrderNumber
+	,Shipments.ShipmentType
+	,Shipments.ShipmentCustomsClearance
+	,Shipments.ShipmentPickUpCompanyID
+	,Shipments.ShipmentPickUpShortName
+	,Shipments.ShipmentPickUpCustomsLocation
+	,Shipments.ShipmentPickUpUserDefinedText01
+	,Shipments.ShipmentPickUpZipCode
+	,Shipments.ShipmentUserDefinedText12
+	,Shipments.ShipmentUserDefinedYesNo01
+	,CAST(Shipments.ShipmentNotes AS NVARCHAR(max))
+	,Shipments.ShipmentPreferredContainerType
+	,Shipments.ShipmentCombinationID
+	,Shipments.ShipmentPriorityOrder
+	,Shipments.ShipmentUserDefinedText01
+	,Shipments.ShipmentUserDefinedText02
+	,Shipments.ShipmentUserDefinedText03
+	,Shipments.ShipmentDelivery3Country
+	,Shipments.ShipmentDelivery3Contact
+	,Shipments.ShipmentDelivery3Phone
+	,Shipments.ShipmentDelivery3Email
+	,Shipments.ShipmentDelivery4CompanyName
+	,Shipments.ShipmentDelivery4ZipCode
+	,Shipments.ShipmentPalletTypeCode
+	,Shipments.ShipmentCustomsOffice
+	,Shipments.ShipmentUserDefinedText13
+	,Shipments.ShipmentConsigneeContact
+	,Shipments.ShipmentIncoTerm
+	,Shipments.ShipmentContainerType
+	,Shipments.ShipmentUserDefinedText14
+	,Shipments.ShipmentVesselCode
+	,Shipments.ShipmentVoyageCode
+	,Shipments.ShipmentEstimatedDateTimeOfDeparture
+	,Shipments.ShipmentUserDefinedDateTime04
+	,Shipments.ShipmentUserDefinedDateTime07
+	,Shipments.ShipmentUserDefinedDateTime05
+	,Shipments.ShipmentAddUserCode
+	,Shipments.ShipmentOwnerLogin
+	,Shipments.ShipmentAddDateTime
+	,Shipments.ShipmentDeliveryCompanyID
+	,Shipments.ShipmentDeliveryCompanyName
+	,Shipments.ShipmentPickUpDateTime
+	,Shipments.ShipmentUserDefinedDateTime01
+	,Shipments.ShipmentUserDefinedYesNo05
+	,Shipments.ShipmentPickUpRegionCode
+	,Shipments.ShipmentDeliveryRegionCode
+	,Shipments.ShipmentDelivery2CompanyID
+	,Shipments.ShipmentConsigneeFax
+	,Shipments.ShipmentContainerNumber
+	,Shipments.ShipmentConsigneeSCVCode
+	,Shipments_ShipmentDetails.ShipmentDetailAddDateTime
+	,Shipments.ShipmentConsigneeCity
+	,Shipments.ShipmentBundleID
+ORDER BY [Created dt/tm] DESC
+	--WCSPRHR1237
